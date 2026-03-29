@@ -1,5 +1,29 @@
 import { getUser, logout } from '../utils.js';
 
+// ── Theme Management ──
+function initTheme() {
+  try {
+    const saved = localStorage.getItem('dq_theme');
+    if (saved) {
+      document.documentElement.setAttribute('data-theme', saved);
+    }
+  } catch {}
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  try { localStorage.setItem('dq_theme', next); } catch {}
+  
+  // Update toggle button icon
+  const btn = document.getElementById('theme-toggle-btn');
+  if (btn) btn.textContent = next === 'dark' ? '☀️' : '🌙';
+}
+
+// Apply theme on module load
+initTheme();
+
 export function renderNavbar() {
   const user = getUser();
 
@@ -22,9 +46,12 @@ export function renderNavbar() {
   const navEl = document.getElementById('navbar');
   if (navEl) navEl.innerHTML = navLinks;
 
-  // Auth area
+  // Auth area + theme toggle
   const authEl = document.getElementById('auth-area');
   if (authEl) {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const themeBtn = `<button id="theme-toggle-btn" class="theme-toggle" title="Toggle dark/light mode">${isDark ? '☀️' : '🌙'}</button>`;
+
     if (user) {
       const name = user.display_name || user.name || user.username;
       const verified = user.is_verified ? '<span class="badge badge-success" style="margin-right:4px">✓ Verified</span>' : '';
@@ -34,14 +61,20 @@ export function renderNavbar() {
         ${verified}
         <span style="font-size:0.85rem; font-weight:500; color:var(--text-secondary)">${name}</span>
         <button id="logout-btn" class="btn btn-ghost btn-sm">Sign Out</button>
+        ${themeBtn}
       `;
       document.getElementById('logout-btn').addEventListener('click', logout);
     } else {
       authEl.innerHTML = `
         <a href="#/login" class="btn btn-ghost btn-sm">Sign In</a>
         <a href="#/gov/login" class="btn btn-secondary btn-sm">Government</a>
+        ${themeBtn}
       `;
     }
+
+    // Attach theme toggle handler
+    const toggleBtn = document.getElementById('theme-toggle-btn');
+    if (toggleBtn) toggleBtn.addEventListener('click', toggleTheme);
   }
 
   // Highlight active nav link

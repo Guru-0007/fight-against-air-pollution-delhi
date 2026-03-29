@@ -625,18 +625,18 @@
 /* ═══════════════════════════════════════════════
    HEALTH IMPACT HERO — Large, alarming, animated
    ═══════════════════════════════════════════════ */
-.impact-hero-panel {
+.health-dash-panel {
   transition: border-color 1s ease;
   border: 2px solid transparent;
 }
 
-.impact-hero-grid {
+.health-dash-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
 }
 
-.impact-hero-card {
+.health-dash-card {
   background: var(--bg-glass-subtle);
   border: 2px solid var(--border);
   border-radius: var(--radius-md);
@@ -647,17 +647,17 @@
   overflow: hidden;
 }
 
-.impact-hero-card:hover {
+.health-dash-card:hover {
   box-shadow: var(--shadow-lg);
   transform: translateY(-3px);
 }
 
-.impact-hero-icon {
+.health-dash-icon {
   font-size: 2rem;
   margin-bottom: 6px;
 }
 
-.impact-hero-value {
+.health-dash-value {
   font-size: 2.8rem;
   font-weight: 900;
   letter-spacing: -0.04em;
@@ -666,7 +666,7 @@
   transition: color 1s ease;
 }
 
-.impact-hero-unit {
+.health-dash-unit {
   font-size: 0.72rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -675,7 +675,7 @@
   margin-top: 4px;
 }
 
-.impact-hero-bar {
+.health-dash-bar {
   height: 6px;
   background: rgba(0, 0, 0, 0.06);
   border-radius: 10px;
@@ -683,24 +683,24 @@
   margin: 14px 0 8px;
 }
 
-.impact-hero-bar-fill {
+.health-dash-bar-fill {
   height: 100%;
   border-radius: 10px;
   transition: width 2s cubic-bezier(0.16, 1, 0.3, 1), background 1s ease;
 }
 
-.impact-hero-note {
+.health-dash-note {
   font-size: 0.68rem;
   color: var(--text-light);
   letter-spacing: 0.02em;
 }
 
 /* Pulse animation for dangerous levels */
-.impact-pulse {
-  animation: impactPulse 2.5s ease infinite;
+.danger-pulse {
+  animation: dangerPulse 2.5s ease infinite;
 }
 
-@keyframes impactPulse {
+@keyframes dangerPulse {
   0%, 100% { box-shadow: var(--shadow-md); }
   50% { box-shadow: 0 4px 20px rgba(197, 71, 91, 0.15), 0 0 40px rgba(197, 71, 91, 0.08); }
 }
@@ -936,6 +936,87 @@
   background: rgba(224, 120, 80, 0.18);
   border-color: rgba(224, 120, 80, 0.4);
   transform: translateY(-1px);
+}
+
+/* ═══════════════════════════════════════════════
+   REPORT STATUS CARDS — User Feedback
+   ═══════════════════════════════════════════════ */
+.report-status-card:hover {
+  background: var(--bg-glass) !important;
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+/* ═══════════════════════════════════════════════
+   ENHANCED DATA UPDATE TRANSITIONS
+   ═══════════════════════════════════════════════ */
+.safety-banner {
+  transition: all 0.5s ease;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.cause-card {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+.cause-card:nth-child(2) { animation-delay: 0.05s; }
+.cause-card:nth-child(3) { animation-delay: 0.1s; }
+.cause-card:nth-child(4) { animation-delay: 0.15s; }
+.cause-card:nth-child(5) { animation-delay: 0.2s; }
+
+/* Critical AQI glow pulse */
+@keyframes criticalGlow {
+  0%, 100% { box-shadow: var(--shadow-md), 0 0 0 0 rgba(197, 71, 91, 0.3); }
+  50% { box-shadow: var(--shadow-md), 0 0 25px 5px rgba(197, 71, 91, 0.15); }
+}
+
+.spike-alert {
+  animation: criticalGlow 2s ease infinite !important;
+  border-color: rgba(197, 71, 91, 0.4) !important;
+}
+
+/* Smooth number transition feel */
+.aqi-hero-number {
+  transition: color 1.2s ease, text-shadow 1.2s ease;
+}
+
+/* Enhanced pollutant bar animation */
+.pollutant-fill {
+  transition: width 1.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* News card staggered entrance */
+.news-card {
+  animation: fadeInUp 0.4s ease-out both;
+}
+.news-card:nth-child(2) { animation-delay: 0.06s; }
+.news-card:nth-child(3) { animation-delay: 0.12s; }
+.news-card:nth-child(4) { animation-delay: 0.18s; }
+
+/* Leaderboard row entrance */
+.leaderboard-row {
+  animation: fadeInUp 0.3s ease-out both;
+}
+.leaderboard-row:nth-child(2) { animation-delay: 0.05s; }
+.leaderboard-row:nth-child(3) { animation-delay: 0.1s; }
+
+/* Gov dashboard zone intel grid */
+.stat-card {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Filter bar active animation */
+.filter-btn {
+  transition: all 0.25s ease;
+}
+
+.filter-btn.active {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(90, 143, 188, 0.2);
 }
 
 @media (max-width: 1100px) {

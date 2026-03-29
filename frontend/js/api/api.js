@@ -10,6 +10,7 @@ export const AQI = {
 export const Reports = {
   submit: (formData) => fetchApi('/reports', { method: 'POST', body: formData }),
   getAll: (status = '') => fetchApi(`/reports?status=${status}`),
+  getMyReports: () => fetchApi('/reports/my-reports'),
   updateStatus: (id, status) => fetchApi(`/reports/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
   banUser: (userId) => fetchApi(`/reports/ban-user/${userId}`, { method: 'POST' }),
   unbanUser: (userId) => fetchApi(`/reports/unban-user/${userId}`, { method: 'POST' }),

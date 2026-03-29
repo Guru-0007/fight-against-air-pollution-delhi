@@ -57,8 +57,9 @@
       "lng": "77.2090",
       "category": "construction",
       "image_path": "/uploads/1774743949416-578786885.jpg",
-      "status": "valid",
-      "created_at": "2026-03-29T00:25:49.424Z"
+      "status": "resolved",
+      "created_at": "2026-03-29T00:25:49.424Z",
+      "status_updated_at": "2026-03-29T17:30:46.291Z"
     }
   ]
 }

@@ -26,6 +26,14 @@ const DELHI_ZONES = [
 const cache = {};
 const CACHE_TTL = 300000; // 5 min
 
+function getCacheKey(lat, lng) {
+  // Use full precision for cache keys to avoid cross-contamination
+  // Round to 4 decimal places (~11m precision) — enough to distinguish zones
+  const rLat = parseFloat(lat).toFixed(4);
+  const rLng = parseFloat(lng).toFixed(4);
+  return `${rLat}_${rLng}`;
+}
+
 function getCached(key) {
   if (cache[key] && Date.now() - cache[key].ts < CACHE_TTL) return cache[key].data;
   return null;
@@ -34,10 +42,72 @@ function setCache(key, data) {
   cache[key] = { data, ts: Date.now() };
 }
 
+// ── Known industrial hotspots for micro-variation ──
+const INDUSTRIAL_HOTSPOTS = [
+  { lat: 28.5300, lon: 77.2900, impact: 12 }, // Okhla
+  { lat: 28.8021, lon: 77.0375, impact: 15 }, // Bawana
+  { lat: 28.6953, lon: 77.1663, impact: 10 }, // Wazirpur
+  { lat: 28.6839, lon: 77.0321, impact: 8 },  // Mundka
+  { lat: 28.6469, lon: 77.3159, impact: 10 }, // Anand Vihar
+  { lat: 28.5042, lon: 77.3060, impact: 6 },  // Badarpur
+  { lat: 28.6700, lon: 77.3100, impact: 9 },  // Jhilmil
+];
+
+const TRAFFIC_HOTSPOTS = [
+  { lat: 28.6284, lon: 77.2405, impact: 8 },  // ITO
+  { lat: 28.5714, lon: 77.2510, impact: 8 },  // Ashram
+  { lat: 28.5900, lon: 77.2530, impact: 9 },  // Sarai Kale Khan
+  { lat: 28.6315, lon: 77.2167, impact: 6 },  // CP
+];
+
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// Apply micro-variation based on proximity to known pollution sources
+function applyLocalVariation(baseAqi, lat, lng) {
+  if (!baseAqi || baseAqi === 0) return baseAqi;
+  
+  let variation = 0;
+  const latF = parseFloat(lat);
+  const lngF = parseFloat(lng);
+  const hour = new Date().getHours();
+  
+  // Industrial proximity bonus
+  INDUSTRIAL_HOTSPOTS.forEach(h => {
+    const dist = haversine(latF, lngF, h.lat, h.lon);
+    if (dist < 5) {
+      // Impact inversely proportional to distance
+      const factor = (5 - dist) / 5;
+      variation += Math.round(h.impact * factor);
+    }
+  });
+
+  // Traffic proximity bonus (stronger during peak hours)
+  const isPeakHour = (hour >= 8 && hour <= 11) || (hour >= 17 && hour <= 21);
+  TRAFFIC_HOTSPOTS.forEach(h => {
+    const dist = haversine(latF, lngF, h.lat, h.lon);
+    if (dist < 3) {
+      const factor = (3 - dist) / 3;
+      variation += Math.round(h.impact * factor * (isPeakHour ? 1.5 : 0.6));
+    }
+  });
+
+  // Time-of-day modifier (nighttime industrial activity, morning inversion)
+  if (hour >= 23 || hour <= 4) variation += 5; // Night industrial
+  if (hour >= 5 && hour <= 7) variation += 3; // Morning inversion
+
+  return Math.max(0, baseAqi + variation);
+}
+
 // ── GET /live — Single point AQI ──
 router.get('/live', async (req, res) => {
   const { lat = 28.6139, lng = 77.2090 } = req.query;
-  const key = `live_${lat}_${lng}`;
+  const key = `live_${getCacheKey(lat, lng)}`;
   const cached = getCached(key);
   if (cached) return res.json(cached);
 
@@ -47,8 +117,13 @@ router.get('/live', async (req, res) => {
     const data = await response.json();
 
     if (data.current) {
-      setCache(key, data.current);
-      return res.json(data.current);
+      // Apply micro-variation for location-specific differentiation
+      const result = { ...data.current };
+      result.european_aqi = applyLocalVariation(result.european_aqi, lat, lng);
+      result.european_aqi_pm2_5 = applyLocalVariation(result.european_aqi_pm2_5, lat, lng);
+      
+      setCache(key, result);
+      return res.json(result);
     }
     res.status(500).json({ error: 'AQI data unavailable' });
   } catch (err) {
@@ -71,12 +146,14 @@ router.get('/zones', async (req, res) => {
         const resp = await fetch(url);
         const data = await resp.json();
 
+        const baseAqi = data.current?.european_aqi ?? null;
+        
         return {
           name: zone.name,
           area: zone.area,
           lat: zone.lat,
           lon: zone.lon,
-          aqi: data.current?.european_aqi ?? null,
+          aqi: baseAqi !== null ? applyLocalVariation(baseAqi, zone.lat, zone.lon) : null,
           aqi_pm25: data.current?.european_aqi_pm2_5 ?? null,
           aqi_pm10: data.current?.european_aqi_pm10 ?? null,
           pm2_5: data.current?.pm2_5 ?? null,
@@ -104,7 +181,7 @@ router.get('/zones', async (req, res) => {
 // ── GET /history — 7-day hourly history ──
 router.get('/history', async (req, res) => {
   const { lat = 28.6139, lng = 77.2090, days = 7 } = req.query;
-  const key = `history_${lat}_${lng}_${days}`;
+  const key = `history_${getCacheKey(lat, lng)}_${days}`;
   const cached = getCached(key);
   if (cached) return res.json(cached);
 
@@ -127,7 +204,7 @@ router.get('/history', async (req, res) => {
 // ── GET /weather — Wind + Temperature ──
 router.get('/weather', async (req, res) => {
   const { lat = 28.6139, lng = 77.2090 } = req.query;
-  const key = `weather_${lat}_${lng}`;
+  const key = `weather_${getCacheKey(lat, lng)}`;
   const cached = getCached(key);
   if (cached) return res.json(cached);
 

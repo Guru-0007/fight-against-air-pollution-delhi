@@ -1,12 +1,12 @@
-import { renderNavbar } from './components/navbar.js';
-import { showToast } from './utils.js';
-import './ambient.js';
-import { Dashboard } from './pages/dashboard.js';
-import { CalculatorPage } from './pages/calculator.js';
-import { AuthPage, GovAuthPage } from './pages/auth.js';
-import { ReportPage } from './pages/report.js';
-import { CommunityPage } from './pages/community.js';
-import { GovDashboard } from './pages/govDashboard.js';
+import { renderNavbar } from './components/navbar.js?v=4.6';
+import { showToast } from './utils.js?v=4.6';
+import './ambient.js?v=4.6';
+import { Dashboard } from './pages/dashboard.js?v=4.6';
+import { CalculatorPage } from './pages/calculator.js?v=4.6';
+import { AuthPage, GovAuthPage } from './pages/auth.js?v=4.6';
+import { ReportPage } from './pages/report.js?v=4.6';
+import { CommunityPage } from './pages/community.js?v=4.6';
+import { GovDashboard } from './pages/govDashboard.js?v=4.6';
 
 // ── Route Table ──
 const pages = {

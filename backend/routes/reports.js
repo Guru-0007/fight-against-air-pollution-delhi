@@ -11,6 +11,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const dbPath = path.join(__dirname, '..', '..', 'database', 'delhi_air.json');
 const db = new JSONDatabase(dbPath);
 
+// Valid status values
+const VALID_STATUSES = ['pending', 'under_review', 'action_in_progress', 'resolved', 'valid', 'fake'];
+
 // Multer for image uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, path.join(__dirname, '..', 'uploads')),
@@ -74,13 +77,30 @@ router.get('/', (req, res) => {
   }
 });
 
+// ── Get My Reports (authenticated user) ──
+router.get('/my-reports', authenticateUser, (req, res) => {
+  try {
+    const allReports = db.data.reports
+      .filter(r => String(r.user_id) === String(req.user.id))
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .map(r => ({
+        ...r,
+        status_updated_at: r.status_updated_at || r.created_at
+      }));
+    res.json(allReports);
+  } catch (err) {
+    console.error('My reports error:', err);
+    res.status(500).json({ error: 'Failed to fetch your reports.' });
+  }
+});
+
 // ── Leaderboard ──
 router.get('/leaderboard', (req, res) => {
   try {
     const users = db.data.users
       .filter(u => !u.is_banned)
       .map(u => {
-        const validReports = db.data.reports.filter(r => String(r.user_id) === String(u.id) && r.status === 'valid').length;
+        const validReports = db.data.reports.filter(r => String(r.user_id) === String(u.id) && (r.status === 'valid' || r.status === 'resolved')).length;
         return {
           username: u.username,
           display_name: u.display_name,
@@ -102,12 +122,18 @@ router.get('/leaderboard', (req, res) => {
 // ── Update Report Status (Gov only) ──
 router.patch('/:id/status', authorizeGov, (req, res) => {
   const { status } = req.body;
-  if (!['pending', 'valid', 'fake'].includes(status)) {
-    return res.status(400).json({ error: 'Invalid status.' });
+  if (!VALID_STATUSES.includes(status)) {
+    return res.status(400).json({ error: `Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}` });
   }
 
   try {
-    db.prepare('UPDATE reports SET status = ? WHERE id = ?').run(status, req.params.id);
+    // Update status and track timestamp
+    const report = db.data.reports.find(r => String(r.id) === String(req.params.id));
+    if (report) {
+      report.status = status;
+      report.status_updated_at = new Date().toISOString();
+      db._write();
+    }
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update report.' });
