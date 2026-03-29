@@ -1,0 +1,64 @@
+{
+  "users": [
+    {
+      "id": 1774738665741,
+      "username": "demo_citizen",
+      "password_hash": "$2a$10$3pgPRmuswTq11qECD9NiFey4cVVJgQ.cgJYqz8ANEeBGKYkSeJrJi",
+      "display_name": "Aarav Sharma",
+      "is_verified": 0,
+      "is_banned": 0,
+      "report_count": 3,
+      "created_at": "2026-03-28T22:57:45.560Z"
+    }
+  ],
+  "gov_users": [
+    {
+      "id": 1774738666295,
+      "username": "dpcc_admin",
+      "password_hash": "$2a$10$/RYqRLx1Sw/nF5vSIFnkTOh6M8EqUQ.ZvRsx7nemCfG8/bZtnjFVa",
+      "name": "Delhi Pollution Control Committee",
+      "role": "administrator"
+    }
+  ],
+  "reports": [
+    {
+      "id": "197e3578-ba64-4c5d-a2f8-71b0c7df101d",
+      "user_id": 1774738665741,
+      "title": "tgrt",
+      "description": "tgtt",
+      "location_text": "110000",
+      "lat": "28.6139",
+      "lng": "77.2090",
+      "category": "industrial",
+      "image_path": "/uploads/1774740494355-262836262.jpg",
+      "status": "valid",
+      "created_at": "2026-03-28T23:28:14.361Z"
+    },
+    {
+      "id": "a5c95ed9-7a7b-4c96-8925-04d710339561",
+      "user_id": 1774738665741,
+      "title": "fc",
+      "description": "dfv",
+      "location_text": "110092",
+      "lat": "28.6139",
+      "lng": "77.2090",
+      "category": "construction",
+      "image_path": "/uploads/1774743340083-710643673.jpg",
+      "status": "valid",
+      "created_at": "2026-03-29T00:15:40.087Z"
+    },
+    {
+      "id": "122e4b75-847e-4178-a9c0-4f3030527132",
+      "user_id": 1774738665741,
+      "title": "guk",
+      "description": "hjlhl",
+      "location_text": "110092",
+      "lat": "28.6139",
+      "lng": "77.2090",
+      "category": "construction",
+      "image_path": "/uploads/1774743949416-578786885.jpg",
+      "status": "valid",
+      "created_at": "2026-03-29T00:25:49.424Z"
+    }
+  ]
+}

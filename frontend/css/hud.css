@@ -1,0 +1,121 @@
+:root {
+  /* Cyber Colors */
+  --bg-dark: #050a10;
+  --bg-panel: rgba(10, 16, 26, 0.7);
+  --cyan: #00f0ff;
+  --cyan-dim: rgba(0, 240, 255, 0.2);
+  --purple: #b400ff;
+  --green: #00ff88;
+  --amber: #ffae00;
+  --red: #ff003c;
+  --text-main: #e0f2fe;
+  --text-muted: #7dd3fc;
+  
+  /* Fonts */
+  --font-hud: 'Orbitron', sans-serif;
+  --font-data: 'Exo 2', sans-serif;
+}
+
+body.cyber-body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  font-family: var(--font-data);
+  line-height: 1.5;
+  height: 100vh;
+  overflow: hidden; /* App container handles scroll */
+}
+
+/* --- HUD Effects --- */
+
+#particle-canvas {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  z-index: -3;
+}
+
+.grid-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  z-index: -2;
+  background-image: 
+    linear-gradient(var(--cyan-dim) 1px, transparent 1px),
+    linear-gradient(90deg, var(--cyan-dim) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  opacity: 0.15;
+}
+
+.scan-line {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw;
+  height: 4px;
+  background: rgba(0, 240, 255, 0.3);
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+  z-index: 999;
+  pointer-events: none;
+  animation: scanline 8s linear infinite;
+}
+
+@keyframes scanline {
+  0% { transform: translateY(-10px); }
+  100% { transform: translateY(100vh); }
+}
+
+/* --- Container & Layout --- */
+
+.hud-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  box-sizing: border-box;
+}
+
+.hud-header {
+  height: 60px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--cyan);
+  background: linear-gradient(180deg, rgba(0, 240, 255, 0.1) 0%, transparent 100%);
+}
+
+.logo-text {
+  font-family: var(--font-hud);
+  font-size: 1.2rem;
+  color: var(--cyan);
+  text-shadow: 0 0 8px var(--cyan);
+  margin: 0;
+}
+
+.status-indicator {
+  font-size: 0.7rem;
+  font-family: var(--font-hud);
+  padding: 2px 6px;
+  border-radius: 2px;
+  margin-left: 10px;
+  letter-spacing: 1px;
+}
+.status-indicator.online {
+  color: var(--green);
+  border: 1px solid var(--green);
+  box-shadow: 0 0 5px var(--green);
+}
+
+.hud-main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: rgba(0, 240, 255, 0.05); }
+::-webkit-scrollbar-thumb { background: var(--cyan); }
