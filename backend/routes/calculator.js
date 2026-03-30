@@ -2,7 +2,7 @@ import express from 'express';
 import fetch from 'node-fetch';
 
 const router = express.Router();
-const WAQI_TOKEN = '902b7ac23858848177471971c036b6ce7a0bf295';
+const WAQI_TOKEN = process.env.WAQI_API_KEY || '902b7ac23858848177471971c036b6ce7a0bf295';
 
 // PM2.5 AQI to concentration (µg/m³)
 function pm25AqiToConc(aqi) {

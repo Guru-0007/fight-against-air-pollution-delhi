@@ -36,15 +36,20 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log('');
-  console.log('╔══════════════════════════════════════════════╗');
-  console.log('║   Delhi Air Quality Intelligence Platform    ║');
-  console.log('║   Powered by Supabase + WAQI                ║');
-  console.log(`║   Running at http://localhost:${PORT}            ║`);
-  console.log('╚══════════════════════════════════════════════╝');
-  console.log('');
-});
+// Export app for Vercel
+export default app;
+
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log('');
+    console.log('╔══════════════════════════════════════════════╗');
+    console.log('║   Delhi Air Quality Intelligence Platform    ║');
+    console.log('║   Powered by Supabase + WAQI                ║');
+    console.log(`║   Running at http://localhost:${PORT}            ║`);
+    console.log('╚══════════════════════════════════════════════╝');
+    console.log('');
+  });
+}
 
 // ── Auto Data Cleanup Cron (12 hours) ──
 const CLEANUP_INTERVAL = 12 * 60 * 60 * 1000;

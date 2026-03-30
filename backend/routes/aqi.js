@@ -3,7 +3,7 @@ import fetch from 'node-fetch';
 
 const router = express.Router();
 
-const WAQI_TOKEN = '902b7ac23858848177471971c036b6ce7a0bf295';
+const WAQI_TOKEN = process.env.WAQI_API_KEY || '902b7ac23858848177471971c036b6ce7a0bf295';
 
 // ── Delhi Zones: 15 monitoring points across the city ──
 const DELHI_ZONES = [
@@ -49,6 +49,25 @@ function pm25AqiToConcentration(aqi) {
   if (aqi <= 300) return 150.5 + (aqi - 201) * (250.4 - 150.5) / 99;
   if (aqi <= 400) return 250.5 + (aqi - 301) * (350.4 - 250.5) / 99;
   return 350.5 + (aqi - 401) * (500.4 - 350.5) / 99;
+}
+
+// ── Fetch Wind Data from Open-Meteo ──
+async function fetchWindData(lat, lng) {
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=wind_speed_10m,wind_direction_10m`;
+    const resp = await fetch(url);
+    const json = await resp.json();
+    if (json.current) {
+      return {
+        wind_speed: json.current.wind_speed_10m,
+        wind_direction: json.current.wind_direction_10m
+      };
+    }
+    return null;
+  } catch (err) {
+    console.error('Wind data error:', err.message);
+    return null;
+  }
 }
 
 // ── Fetch WAQI data for a lat/lng ──
@@ -103,9 +122,14 @@ router.get('/live', async (req, res) => {
 
   try {
     const waqiData = await fetchWAQI(lat, lng);
+    const windData = await fetchWindData(lat, lng);
     const result = transformWAQI(waqiData);
 
     if (result) {
+      if (windData) {
+        result.wind_speed = windData.wind_speed;
+        result.wind_direction = windData.wind_direction;
+      }
       setCache(key, result);
       return res.json(result);
     }

@@ -34,7 +34,7 @@ router.post('/register', async (req, res) => {
       email: email.trim(),
       password,
       options: {
-        emailRedirectTo: 'http://localhost:3005/#/login',
+        emailRedirectTo: process.env.PUBLIC_URL ? `${process.env.PUBLIC_URL}/#/login` : 'http://localhost:3005/#/login',
         data: {
           username: username.toLowerCase().trim(),
           display_name: display_name.trim(),
