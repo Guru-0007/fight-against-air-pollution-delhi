@@ -40,26 +40,13 @@
 - [Node.js](https://nodejs.org/) (v18.x or higher)
 - [Supabase Account](https://supabase.com/)
 
-### 2. Local Setup
-```bash
-# Clone the repository
-git clone https://github.com/Guru-0007/fight-against-air-pollution-delhi.git
-cd fight-against-air-pollution-delhi
+### 2. Launch
+Simply open `frontend/index.html` in any modern browser, or use a live server extension.
 
-# Setup Backend
-cd backend
-npm install
-
-# Setup Frontend
-# (No install needed - served statically by backend)
-```
-
-### 3. Launch
-```bash
-# Start the full ecosystem
-npm start
-```
-The application will be live at `http://localhost:3005`.
+The application is now a **Pure Frontend Static Site**, communicating directly with:
+- **Supabase**: For Authentication, News, and Reports.
+- **WAQI API**: For real-time air quality metrics.
+- **Open-Meteo**: For dynamic wind and weather data.
 
 ---
 
