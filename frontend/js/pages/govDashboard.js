@@ -39,10 +39,9 @@ export const GovDashboard = {
             <div class="filter-bar">
               <button class="filter-btn active" data-filter="">All</button>
               <button class="filter-btn" data-filter="pending">Pending</button>
-              <button class="filter-btn" data-filter="under_review">Under Review</button>
-              <button class="filter-btn" data-filter="action_in_progress">In Progress</button>
+              <button class="filter-btn" data-filter="valid">Valid</button>
+              <button class="filter-btn" data-filter="working">Working</button>
               <button class="filter-btn" data-filter="resolved">Resolved</button>
-              <button class="filter-btn" data-filter="valid">Verified</button>
               <button class="filter-btn" data-filter="fake">Fake</button>
             </div>
 
@@ -162,24 +161,28 @@ export const GovDashboard = {
     // Global gov actions
     window._govAction = async (action, id) => {
       try {
-        if (action === 'verify') {
+        if (action === 'valid') {
           await Reports.updateStatus(id, 'valid');
           window.showToast('Report verified.', 'success');
         } else if (action === 'fake') {
           await Reports.updateStatus(id, 'fake');
           window.showToast('Report marked as fake.', 'info');
-        } else if (action === 'under_review') {
-          await Reports.updateStatus(id, 'under_review');
-          window.showToast('Report marked as under review.', 'info');
-        } else if (action === 'action_in_progress') {
-          await Reports.updateStatus(id, 'action_in_progress');
+        } else if (action === 'working') {
+          await Reports.updateStatus(id, 'working');
           window.showToast('Action initiated on report.', 'info');
         } else if (action === 'resolved') {
           await Reports.updateStatus(id, 'resolved');
           window.showToast('Report marked as resolved.', 'success');
-        } else if (action === 'undo') {
+        } else if (action === 'undo_pending') {
           await Reports.updateStatus(id, 'pending');
-          window.showToast('Report status reverted.', 'info');
+          window.showToast('Report reverted to pending.', 'info');
+        } else if (action === 'undo_valid') {
+          await Reports.updateStatus(id, 'valid');
+          window.showToast('Report reverted to valid.', 'info');
+        } else if (action === 'delete') {
+          if (!confirm('Permanently delete this report?')) return;
+          await Reports.delete(id);
+          window.showToast('Report deleted.', 'success');
         } else if (action === 'ban') {
           if (!confirm('Ban this user?')) return;
           await Reports.banUser(id);
@@ -193,6 +196,28 @@ export const GovDashboard = {
       } catch (e) {
         window.showToast(e.message, 'error');
       }
+    };
+
+    window._openReportModal = (reportId) => {
+      const report = window.__loadedReports?.find(r => r.id === reportId);
+      if (!report) return;
+
+      const date = new Date(report.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+      const statusInfo = REPORT_STATUS_LABELS[report.status] || REPORT_STATUS_LABELS['pending'];
+
+      document.getElementById('modal-title').textContent = report.title;
+      document.getElementById('modal-status').className = `badge ${statusInfo.badge}`;
+      document.getElementById('modal-status').innerHTML = `${statusInfo.icon} ${report.status.replace(/_/g, ' ')}`;
+      document.getElementById('modal-meta').textContent = `${report.display_name || 'Unknown'} · ${date}`;
+      document.getElementById('modal-desc').textContent = report.description;
+      document.getElementById('modal-loc').textContent = `📍 ${report.location_text}`;
+      document.getElementById('modal-image').src = report.image_url;
+      document.getElementById('report-modal').classList.add('active');
+    };
+
+    window.closeReportModal = () => {
+      document.getElementById('report-modal').classList.remove('active');
+      document.getElementById('modal-image').src = '';
     };
   }
 };
@@ -650,6 +675,8 @@ async function loadReports(status = '') {
 
   try {
     const reports = await Reports.getAll(status);
+    window.__loadedReports = reports; // Cache for modal
+    
     const badge = document.getElementById('report-count-badge');
     if (badge) badge.textContent = `${reports.length} reports`;
 
@@ -697,7 +724,7 @@ async function loadReports(status = '') {
             <div class="report-title">${r.title} <span style="color:var(--text-muted); font-weight:400;">[${r.category}]</span></div>
             <div class="report-location">📍 ${r.location_text}</div>
             <div class="report-desc">${r.description}</div>
-            ${r.image_path ? `<img src="${r.image_path}" style="max-width:200px; border-radius:var(--radius-sm); margin-bottom:12px;">` : ''}
+            ${r.image_url ? `<img src="${r.image_url}" onclick="window._openReportModal('${r.id}')" style="max-width:200px; border-radius:var(--radius-sm); margin-bottom:12px; background:#1a1a2e; object-fit: cover; cursor:pointer;" onerror="this.onerror=null; this.src='https://placehold.co/200x150/1a1a2e/4A4A6A?text=Image+Unavailable';">` : ''}
             <div class="report-actions" style="margin-top: 12px; display: flex; gap: 8px; flex-wrap:wrap;">
               ${getStatusActions(r)}
               ${r.is_banned ? `
@@ -719,29 +746,39 @@ async function loadReports(status = '') {
 
 function getStatusActions(report) {
   const id = report.id;
+  
+  let actionButtons = '';
+
   switch (report.status) {
     case 'pending':
-      return `
-        <button class="btn btn-secondary btn-sm" onclick="window._govAction('under_review','${id}')">🔍 Review</button>
-        <button class="btn btn-success btn-sm" onclick="window._govAction('verify','${id}')">✓ Verify</button>
+      actionButtons = `
+        <button class="btn btn-success btn-sm" onclick="window._govAction('valid','${id}')">✓ Valid</button>
         <button class="btn btn-danger btn-sm" onclick="window._govAction('fake','${id}')">✕ Fake</button>
       `;
-    case 'under_review':
-      return `
-        <button class="btn btn-primary btn-sm" onclick="window._govAction('action_in_progress','${id}')">⚡ Start Action</button>
-        <button class="btn btn-success btn-sm" onclick="window._govAction('verify','${id}')">✓ Verify</button>
-        <button class="btn btn-danger btn-sm" onclick="window._govAction('fake','${id}')">✕ Fake</button>
-      `;
-    case 'action_in_progress':
-      return `
-        <button class="btn btn-success btn-sm" onclick="window._govAction('resolved','${id}')">✅ Resolve</button>
-        <button class="btn btn-secondary btn-sm" onclick="window._govAction('undo','${id}')">↺ Undo</button>
-      `;
-    case 'resolved':
+      break;
     case 'valid':
+      actionButtons = `
+        <button class="btn btn-primary btn-sm" onclick="window._govAction('working','${id}')">⚡ Working</button>
+        <button class="btn btn-success btn-sm" onclick="window._govAction('resolved','${id}')">✅ Resolve</button>
+        <button class="btn btn-secondary btn-sm" onclick="window._govAction('undo_pending','${id}')">↺ Undo</button>
+      `;
+      break;
+    case 'working':
+      actionButtons = `
+        <button class="btn btn-success btn-sm" onclick="window._govAction('resolved','${id}')">✅ Resolve</button>
+        <button class="btn btn-secondary btn-sm" onclick="window._govAction('undo_valid','${id}')">↺ Undo</button>
+      `;
+      break;
+    case 'resolved':
+      actionButtons = `<button class="btn btn-secondary btn-sm" onclick="window._govAction('undo_working','${id}')">↺ Revert to Working</button>`;
+      // Optional: Since there is no status prior to resolved if it jumped from valid, wait, let's just make undo revert to valid for simplicity
+      actionButtons = `<button class="btn btn-secondary btn-sm" onclick="window._govAction('undo_valid','${id}')">↺ Undo Action</button>`;
+      break;
     case 'fake':
-      return `<button class="btn btn-secondary btn-sm" onclick="window._govAction('undo','${id}')">↺ Revert to Pending</button>`;
-    default:
-      return '';
+      actionButtons = `<button class="btn btn-secondary btn-sm" onclick="window._govAction('undo_pending','${id}')">↺ Undo</button>`;
+      break;
   }
+
+  // Always append Delete button for Gov
+  return actionButtons + ` <button class="btn btn-danger btn-sm" style="margin-left:auto; background-color: #8B0000; color: white; border:none;" onclick="window._govAction('delete','${id}')">🗑️ Delete</button>`;
 }

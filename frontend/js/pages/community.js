@@ -108,13 +108,14 @@ export const CommunityPage = {
 
       if (news && news.length > 0) {
         news.forEach(item => {
-          const date = item.publishedAt ? new Date(item.publishedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '';
+          if (!item.url || !item.url.startsWith('http')) return; // Validate URL before display (Crash fix)
+          const date = item.published_at ? new Date(item.published_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '';
           html += `
-            <div class="news-card" onclick="window.open('${item.url}', '_blank')">
+            <a href="${encodeURI(item.url)}" target="_blank" class="news-card" style="display:block; text-decoration:none; color:inherit;">
               <div class="news-source">${item.source || 'News'} ${date ? '· ' + date : ''}</div>
-              <div class="news-title">${item.title}</div>
+              <div class="news-title">${item.title || 'Untitled'}</div>
               ${item.description ? `<div class="news-desc">${item.description}</div>` : ''}
-            </div>
+            </a>
           `;
         });
       } else {

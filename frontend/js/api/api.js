@@ -12,6 +12,7 @@ export const Reports = {
   getAll: (status = '') => fetchApi(`/reports?status=${status}`),
   getMyReports: () => fetchApi('/reports/my-reports'),
   updateStatus: (id, status) => fetchApi(`/reports/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  delete: (id) => fetchApi(`/reports/${id}`, { method: 'DELETE' }),
   banUser: (userId) => fetchApi(`/reports/ban-user/${userId}`, { method: 'POST' }),
   unbanUser: (userId) => fetchApi(`/reports/unban-user/${userId}`, { method: 'POST' }),
   getLeaderboard: () => fetchApi('/reports/leaderboard')

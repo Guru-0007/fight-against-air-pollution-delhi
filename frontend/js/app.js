@@ -1,27 +1,34 @@
-import { renderNavbar } from './components/navbar.js?v=4.6';
-import { showToast } from './utils.js?v=4.6';
-import './ambient.js?v=4.6';
-import { Dashboard } from './pages/dashboard.js?v=4.6';
-import { CalculatorPage } from './pages/calculator.js?v=4.6';
-import { AuthPage, GovAuthPage } from './pages/auth.js?v=4.6';
-import { ReportPage } from './pages/report.js?v=4.6';
-import { CommunityPage } from './pages/community.js?v=4.6';
-import { GovDashboard } from './pages/govDashboard.js?v=4.6';
+import './supabaseClient.js?v=7.0';
+import { renderNavbar } from './components/navbar.js?v=7.0';
+import { showToast } from './utils.js?v=7.0';
+import './ambient.js?v=7.0';
+import { Dashboard } from './pages/dashboard.js?v=7.0';
+import { CalculatorPage } from './pages/calculator.js?v=7.0';
+import { AuthPage, GovAuthPage } from './pages/auth.js?v=7.0';
+import { ReportPage } from './pages/report.js?v=7.0';
+import { CommunityPage } from './pages/community.js?v=7.0';
+import { GovDashboard } from './pages/govDashboard.js?v=7.0';
 
 // ── Route Table ──
 const pages = {
-  '#/dashboard':      { title: 'Dashboard — Delhi Air Quality', render: Dashboard.render, init: Dashboard.init },
-  '#/calculator':     { title: 'True Cost Calculator — Delhi Air Quality', render: CalculatorPage.render, init: CalculatorPage.init },
-  '#/report':         { title: 'Submit Report — Delhi Air Quality', render: ReportPage.render, init: ReportPage.init },
-  '#/community':      { title: 'Community — Delhi Air Quality', render: CommunityPage.render, init: CommunityPage.init },
-  '#/login':          { title: 'Sign In — Delhi Air Quality', render: AuthPage.render, init: AuthPage.init },
-  '#/gov/login':      { title: 'Government Login — Delhi Air Quality', render: GovAuthPage.render, init: GovAuthPage.init },
-  '#/gov/dashboard':  { title: 'Control Panel — Delhi Air Quality', render: GovDashboard.render, init: GovDashboard.init }
+  '#/dashboard':      { title: 'Dashboard — PolluSense', render: Dashboard.render, init: Dashboard.init },
+  '#/calculator':     { title: 'True Cost Calculator — PolluSense', render: CalculatorPage.render, init: CalculatorPage.init },
+  '#/report':         { title: 'Submit Report — PolluSense', render: ReportPage.render, init: ReportPage.init },
+  '#/community':      { title: 'Community — PolluSense', render: CommunityPage.render, init: CommunityPage.init },
+  '#/login':          { title: 'Sign In — PolluSense', render: AuthPage.render, init: AuthPage.init },
+  '#/gov/login':      { title: 'Government Login — PolluSense', render: GovAuthPage.render, init: GovAuthPage.init },
+  '#/gov/dashboard':  { title: 'Control Panel — PolluSense', render: GovDashboard.render, init: GovDashboard.init }
 };
 
 async function router() {
-  const hash = window.location.hash || '#/dashboard';
-  const page = pages[hash] || pages['#/dashboard'];
+  let hash = window.location.hash || '#/dashboard';
+  let route = hash;
+  
+  if (hash.includes('access_token=') || hash.includes('type=recovery') || hash.includes('type=signup')) {
+    route = '#/login';
+  }
+  
+  const page = pages[route] || pages['#/dashboard'];
 
   document.title = page.title;
   renderNavbar();
@@ -54,8 +61,28 @@ async function router() {
 
 window.addEventListener('hashchange', router);
 window.addEventListener('DOMContentLoaded', () => {
+  // Wipe old testing sessions to fix the "stuck in gov mode" bug
+  if (!localStorage.getItem('pollusense_v3_reset')) {
+    localStorage.removeItem('pollusense_auth');
+    localStorage.setItem('pollusense_v3_reset', 'true');
+  }
+
   if (!window.location.hash) window.location.hash = '#/dashboard';
   router();
+
+  // Intro Animation Logic
+  const overlay = document.getElementById('intro-overlay');
+  if (overlay) {
+    const skipBtn = document.getElementById('intro-skip');
+    const dismissIntro = () => {
+      overlay.style.opacity = '0';
+      overlay.style.pointerEvents = 'none';
+      setTimeout(() => overlay.remove(), 1200);
+    };
+
+    if (skipBtn) skipBtn.onclick = dismissIntro;
+    setTimeout(dismissIntro, 4000); // Auto remove after 4s
+  }
 });
 
 // Make showToast globally available

@@ -1,8 +1,7 @@
-import jwt from 'jsonwebtoken';
+import { supabase } from '../db/supabase.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'delhi-air-quality-secret-2024';
-
-export function authenticateUser(req, res, next) {
+// Verify Supabase access token and load user profile
+export async function authenticateUser(req, res, next) {
   const authHeader = req.headers['authorization'];
   if (!authHeader) return res.status(401).json({ error: 'Access denied. Please log in.' });
 
@@ -10,10 +9,35 @@ export function authenticateUser(req, res, next) {
   if (!token) return res.status(401).json({ error: 'Access denied. Invalid token format.' });
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
+    // Verify the Supabase JWT
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) return res.status(401).json({ error: 'Session expired. Please log in again.' });
+
+    // Load profile
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+
+    if (!profile) return res.status(401).json({ error: 'Profile not found.' });
+    if (profile.is_banned) return res.status(403).json({ error: 'Account suspended. Contact support.' });
+
+    req.user = {
+      id: user.id,
+      email: user.email,
+      username: profile.username,
+      display_name: profile.display_name,
+      role: profile.role,
+      type: profile.role === 'government' ? 'gov' : 'user',
+      is_verified: profile.is_verified,
+      is_banned: profile.is_banned,
+      report_count: profile.report_count
+    };
+    req.accessToken = token;
     next();
   } catch (ex) {
+    console.error('Auth error:', ex);
     res.status(401).json({ error: 'Session expired. Please log in again.' });
   }
 }

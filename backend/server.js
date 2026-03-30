@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import fs from 'fs';
+import { supabase } from './db/supabase.js';
 
 // Route imports
 import aqiRouter from './routes/aqi.js';
@@ -17,12 +17,6 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3005;
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -34,8 +28,7 @@ app.use('/api/reports', reportsRouter);
 app.use('/api/news', newsRouter);
 app.use('/api/calculator', calculatorRouter);
 
-// Serve uploads and frontend static files
-app.use('/uploads', express.static(uploadsDir));
+// Serve frontend static files
 app.use(express.static(path.join(__dirname, '..', 'frontend')));
 
 // SPA fallback
@@ -47,7 +40,33 @@ app.listen(PORT, () => {
   console.log('');
   console.log('╔══════════════════════════════════════════════╗');
   console.log('║   Delhi Air Quality Intelligence Platform    ║');
+  console.log('║   Powered by Supabase + WAQI                ║');
   console.log(`║   Running at http://localhost:${PORT}            ║`);
   console.log('╚══════════════════════════════════════════════╝');
   console.log('');
 });
+
+// ── Auto Data Cleanup Cron (12 hours) ──
+const CLEANUP_INTERVAL = 12 * 60 * 60 * 1000;
+setInterval(async () => {
+  try {
+    const { error } = await supabase.rpc('cleanup_old_reports', { max_records: 1000 });
+    if (error) {
+      console.error('[Cron] Cleanup error:', error);
+    } else {
+      console.log('[Cron] Database auto-cleanup executed successfully.');
+    }
+  } catch (err) {
+    console.error('[Cron] Cleanup exception:', err);
+  }
+}, CLEANUP_INTERVAL);
+
+// Run once on startup
+(async () => {
+  try {
+    const { error } = await supabase.rpc('cleanup_old_reports', { max_records: 1000 });
+    if (error) console.error('[Init] Cleanup error:', error);
+  } catch (err) {
+    console.error('[Init] Cleanup exception:', err);
+  }
+})();

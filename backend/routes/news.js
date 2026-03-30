@@ -1,47 +1,82 @@
 import express from 'express';
 import fetch from 'node-fetch';
+import { supabase } from '../db/supabase.js';
 
 const router = express.Router();
 
-let newsCache = { data: null, ts: 0 };
-const CACHE_TTL = 1800000; // 30 min
-
 router.get('/', async (req, res) => {
-  if (newsCache.data && Date.now() - newsCache.ts < CACHE_TTL) {
-    return res.json(newsCache.data);
-  }
-
   try {
-    // Use free MediaStack API for news — no key needed for limited use
-    // If that fails, we fall back to Google News RSS parsing
-    const articles = await fetchFromGoogleNewsRSS();
+    // 1. Check if we already have articles for today
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
 
-    if (articles && articles.length > 0) {
-      newsCache = { data: articles, ts: Date.now() };
-      return res.json(articles);
+    const { data: todayArticles, error: checkError } = await supabase
+      .from('articles')
+      .select('id')
+      .gte('created_at', startOfDay.toISOString());
+
+    if (!checkError && (!todayArticles || todayArticles.length === 0)) {
+      // Fetch new articles from Google News RSS
+      const articles = await fetchFromGoogleNewsRSS();
+      
+      if (articles && articles.length > 0) {
+        // Take top 3 max
+        const topArticles = articles.slice(0, 3);
+        
+        // Insert new articles into DB (ignore uniqueness conflicts on URL)
+        for (const item of topArticles) {
+          await supabase.from('articles').insert({
+            title: item.title,
+            source: item.source,
+            url: item.url,
+            image_url: null, // RSS generally doesn't provide easy image_url
+            published_at: item.publishedAt
+          }).catch(() => {}); // Catch unique constraint errors silently
+        }
+
+        // Cap to 25 articles total by deleting oldest
+        const { data: allArticles } = await supabase
+          .from('articles')
+          .select('id')
+          .order('published_at', { ascending: false });
+        
+        if (allArticles && allArticles.length > 25) {
+          const idsToDelete = allArticles.slice(25).map(a => a.id);
+          if (idsToDelete.length > 0) {
+            await supabase.from('articles').delete().in('id', idsToDelete);
+          }
+        }
+      }
     }
 
-    // Final fallback — curated recent articles
-    const fallback = getRecentPollutionArticles();
-    res.json(fallback);
+    // 2. Return articles from DB
+    const { data: articles, error } = await supabase
+      .from('articles')
+      .select('*')
+      .order('published_at', { ascending: false });
+
+    if (error || !articles || articles.length === 0) {
+      // Ultimate Fallback
+      return res.json(getRecentPollutionArticles());
+    }
+
+    res.json(articles);
   } catch (err) {
     console.error('News fetch error:', err.message);
-    const fallback = getRecentPollutionArticles();
-    res.json(fallback);
+    res.json(getRecentPollutionArticles());
   }
 });
 
 // ── Google News RSS Feed (free, no API key) ──
 async function fetchFromGoogleNewsRSS() {
   try {
-    const query = encodeURIComponent('Delhi air pollution AQI');
+    const query = encodeURIComponent('Delhi air pollution AQI process');
     const rssUrl = `https://news.google.com/rss/search?q=${query}&hl=en-IN&gl=IN&ceid=IN:en`;
     const resp = await fetch(rssUrl, {
       headers: { 'User-Agent': 'DelhiAirQualityPlatform/2.0' }
     });
     const xml = await resp.text();
 
-    // Simple XML parsing for RSS items
     const items = [];
     const itemRegex = /<item>([\s\S]*?)<\/item>/g;
     let match;
@@ -56,8 +91,7 @@ async function fetchFromGoogleNewsRSS() {
       if (title && link) {
         items.push({
           title: decodeHTMLEntities(title),
-          description: source ? `Source: ${decodeHTMLEntities(source)}` : 'Delhi Air Quality News',
-          url: link,
+          url: decodeHTMLEntities(link),
           publishedAt: pubDate || new Date().toISOString(),
           source: source ? decodeHTMLEntities(source) : 'Google News'
         });
@@ -72,7 +106,6 @@ async function fetchFromGoogleNewsRSS() {
 }
 
 function extractTag(xml, tag) {
-  // Handle CDATA sections
   const cdataRegex = new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]></${tag}>`);
   const cdataMatch = xml.match(cdataRegex);
   if (cdataMatch) return cdataMatch[1].trim();
@@ -97,31 +130,15 @@ function getRecentPollutionArticles() {
   return [
     {
       title: 'Delhi AQI remains in severe category as winter pollution peaks',
-      description: 'Air quality in the national capital continues to deteriorate with PM2.5 levels crossing safe limits.',
       url: 'https://www.ndtv.com/delhi-news',
-      publishedAt: new Date(now - 3600000).toISOString(),
+      published_at: new Date(now - 3600000).toISOString(),
       source: 'NDTV'
     },
     {
       title: 'GRAP Stage 3 restrictions imposed across NCR region',
-      description: 'Construction activities halted as pollution levels reach alarming levels in Delhi-NCR.',
       url: 'https://www.thehindu.com/news/national',
-      publishedAt: new Date(now - 7200000).toISOString(),
+      published_at: new Date(now - 7200000).toISOString(),
       source: 'The Hindu'
-    },
-    {
-      title: 'Stubble burning contributes to 40% of Delhi pollution: Study',
-      description: 'Research links agricultural waste burning in neighboring states to deteriorating air quality.',
-      url: 'https://timesofindia.indiatimes.com/city/delhi',
-      publishedAt: new Date(now - 14400000).toISOString(),
-      source: 'Times of India'
-    },
-    {
-      title: 'Electric vehicle adoption could reduce Delhi emissions by 30%',
-      description: 'Delhi government pushes for EV transition to combat vehicular pollution.',
-      url: 'https://www.livemint.com/auto-news',
-      publishedAt: new Date(now - 28800000).toISOString(),
-      source: 'Mint'
     }
   ];
 }

@@ -1,4 +1,6 @@
 import { getAQIColorRaw } from '../utils.js';
+import { FACTORIES } from '../data/govData.js';
+import { getUser } from '../utils.js';
 
 export class AQIMap {
   constructor(containerId) {
@@ -240,27 +242,35 @@ export class AQIMap {
       });
 
       const marker = L.marker([f.lat, f.lon], { icon }).addTo(this.map);
+      
+      const user = getUser();
+      const isGov = user && user.type === 'gov';
+
+      const tooltipAction = isGov ? '<br><span style="font-size:0.72rem;color:var(--accent-text);">Click to send notice</span>' : '<br><span style="font-size:0.72rem;color:var(--text-muted);">Industrial Emission Source</span>';
+
       marker.bindTooltip(
-        `<b>🏭 ${f.name}</b><br><span style="color:var(--aqi-unhealthy);font-weight:500">${f.type}</span><br><span style="font-size:0.72rem;color:var(--accent-text);">Click to send notice</span>`,
+        `<b>🏭 ${f.name}</b><br><span style="color:var(--aqi-unhealthy);font-weight:500">${f.type}</span>${tooltipAction}`,
         { className: 'aqi-tooltip' }
       );
 
-      // Click factory → open email
-      marker.on('click', () => {
-        const subject = encodeURIComponent(`Pollution Compliance Notice — ${f.name}`);
-        const body = encodeURIComponent(
-          `To Whom It May Concern,\n\n` +
-          `This is to bring to your attention suspected emission violations at:\n\n` +
-          `Facility: ${f.name}\n` +
-          `Type: ${f.type}\n` +
-          `Location: ${f.lat}°N, ${f.lon}°E\n\n` +
-          `The facility appears to be contributing to elevated pollution levels in the surrounding area. ` +
-          `Immediate inspection and compliance verification is requested under the Air (Prevention and Control of Pollution) Act, 1981.\n\n` +
-          `Please take necessary action.\n\nRegards`
-        );
-        window.open(`mailto:enforcement@dpcc.delhigovt.nic.in?subject=${subject}&body=${body}`, '_self');
-        window.showToast('Email client opened for ' + f.name, 'success');
-      });
+      // Click factory → open email (ONLY FOR GOV)
+      if (isGov) {
+        marker.on('click', () => {
+          const subject = encodeURIComponent(`Pollution Compliance Notice — ${f.name}`);
+          const body = encodeURIComponent(
+            `To Whom It May Concern,\n\n` +
+            `This is to bring to your attention suspected emission violations at:\n\n` +
+            `Facility: ${f.name}\n` +
+            `Type: ${f.type}\n` +
+            `Location: ${f.lat}°N, ${f.lon}°E\n\n` +
+            `The facility appears to be contributing to elevated pollution levels in the surrounding area. ` +
+            `Immediate inspection and compliance verification is requested under the Air (Prevention and Control of Pollution) Act, 1981.\n\n` +
+            `Please take necessary action.\n\nRegards`
+          );
+          window.open(`mailto:enforcement@dpcc.delhigovt.nic.in?subject=${subject}&body=${body}`, '_self');
+          window.showToast('Email client opened for ' + f.name, 'success');
+        });
+      }
     });
   }
 

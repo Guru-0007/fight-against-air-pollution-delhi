@@ -3,6 +3,8 @@ import fetch from 'node-fetch';
 
 const router = express.Router();
 
+const WAQI_TOKEN = '902b7ac23858848177471971c036b6ce7a0bf295';
+
 // ── Delhi Zones: 15 monitoring points across the city ──
 const DELHI_ZONES = [
   { name: 'Anand Vihar', lat: 28.6469, lon: 77.3159, area: 'East Delhi' },
@@ -22,18 +24,13 @@ const DELHI_ZONES = [
   { name: 'Vivek Vihar', lat: 28.6733, lon: 77.3152, area: 'East Delhi' }
 ];
 
-// Cache with per-key TTL
+// Cache
 const cache = {};
 const CACHE_TTL = 300000; // 5 min
 
 function getCacheKey(lat, lng) {
-  // Use full precision for cache keys to avoid cross-contamination
-  // Round to 4 decimal places (~11m precision) — enough to distinguish zones
-  const rLat = parseFloat(lat).toFixed(4);
-  const rLng = parseFloat(lng).toFixed(4);
-  return `${rLat}_${rLng}`;
+  return `${parseFloat(lat).toFixed(4)}_${parseFloat(lng).toFixed(4)}`;
 }
-
 function getCached(key) {
   if (cache[key] && Date.now() - cache[key].ts < CACHE_TTL) return cache[key].data;
   return null;
@@ -42,66 +39,59 @@ function setCache(key, data) {
   cache[key] = { data, ts: Date.now() };
 }
 
-// ── Known industrial hotspots for micro-variation ──
-const INDUSTRIAL_HOTSPOTS = [
-  { lat: 28.5300, lon: 77.2900, impact: 12 }, // Okhla
-  { lat: 28.8021, lon: 77.0375, impact: 15 }, // Bawana
-  { lat: 28.6953, lon: 77.1663, impact: 10 }, // Wazirpur
-  { lat: 28.6839, lon: 77.0321, impact: 8 },  // Mundka
-  { lat: 28.6469, lon: 77.3159, impact: 10 }, // Anand Vihar
-  { lat: 28.5042, lon: 77.3060, impact: 6 },  // Badarpur
-  { lat: 28.6700, lon: 77.3100, impact: 9 },  // Jhilmil
-];
-
-const TRAFFIC_HOTSPOTS = [
-  { lat: 28.6284, lon: 77.2405, impact: 8 },  // ITO
-  { lat: 28.5714, lon: 77.2510, impact: 8 },  // Ashram
-  { lat: 28.5900, lon: 77.2530, impact: 9 },  // Sarai Kale Khan
-  { lat: 28.6315, lon: 77.2167, impact: 6 },  // CP
-];
-
-function haversine(lat1, lon1, lat2, lon2) {
-  const R = 6371;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+// ── Convert PM2.5 AQI sub-index to concentration (µg/m³) ──
+function pm25AqiToConcentration(aqi) {
+  if (aqi <= 0) return 0;
+  if (aqi <= 50) return aqi * 12.0 / 50.0;
+  if (aqi <= 100) return 12.1 + (aqi - 51) * (35.4 - 12.1) / 49;
+  if (aqi <= 150) return 35.5 + (aqi - 101) * (55.4 - 35.5) / 49;
+  if (aqi <= 200) return 55.5 + (aqi - 151) * (150.4 - 55.5) / 49;
+  if (aqi <= 300) return 150.5 + (aqi - 201) * (250.4 - 150.5) / 99;
+  if (aqi <= 400) return 250.5 + (aqi - 301) * (350.4 - 250.5) / 99;
+  return 350.5 + (aqi - 401) * (500.4 - 350.5) / 99;
 }
 
-// Apply micro-variation based on proximity to known pollution sources
-function applyLocalVariation(baseAqi, lat, lng) {
-  if (!baseAqi || baseAqi === 0) return baseAqi;
-  
-  let variation = 0;
-  const latF = parseFloat(lat);
-  const lngF = parseFloat(lng);
-  const hour = new Date().getHours();
-  
-  // Industrial proximity bonus
-  INDUSTRIAL_HOTSPOTS.forEach(h => {
-    const dist = haversine(latF, lngF, h.lat, h.lon);
-    if (dist < 5) {
-      // Impact inversely proportional to distance
-      const factor = (5 - dist) / 5;
-      variation += Math.round(h.impact * factor);
-    }
-  });
+// ── Fetch WAQI data for a lat/lng ──
+async function fetchWAQI(lat, lng) {
+  const url = `https://api.waqi.info/feed/geo:${lat};${lng}/?token=${WAQI_TOKEN}`;
+  const resp = await fetch(url);
+  const json = await resp.json();
+  if (json.status !== 'ok') return null;
+  return json.data;
+}
 
-  // Traffic proximity bonus (stronger during peak hours)
-  const isPeakHour = (hour >= 8 && hour <= 11) || (hour >= 17 && hour <= 21);
-  TRAFFIC_HOTSPOTS.forEach(h => {
-    const dist = haversine(latF, lngF, h.lat, h.lon);
-    if (dist < 3) {
-      const factor = (3 - dist) / 3;
-      variation += Math.round(h.impact * factor * (isPeakHour ? 1.5 : 0.6));
-    }
-  });
+// ── Transform WAQI data into our API response format ──
+function transformWAQI(waqiData) {
+  if (!waqiData) return null;
 
-  // Time-of-day modifier (nighttime industrial activity, morning inversion)
-  if (hour >= 23 || hour <= 4) variation += 5; // Night industrial
-  if (hour >= 5 && hour <= 7) variation += 3; // Morning inversion
+  const aqi = waqiData.aqi || 0;
+  const iaqi = waqiData.iaqi || {};
 
-  return Math.max(0, baseAqi + variation);
+  // Extract pollutant values (WAQI returns AQI sub-indices)
+  const pm25_aqi = iaqi.pm25?.v || 0;
+  const pm10_aqi = iaqi.pm10?.v || 0;
+  const no2_val = iaqi.no2?.v || 0;
+  const co_val = iaqi.co?.v || 0;
+  const so2_val = iaqi.so2?.v || 0;
+  const o3_val = iaqi.o3?.v || 0;
+
+  // Convert PM2.5 sub-index to concentration
+  const pm2_5 = pm25_aqi > 0 ? pm25AqiToConcentration(pm25_aqi) : (aqi > 0 ? aqi * 0.6 : 0);
+  const pm10 = pm10_aqi > 0 ? pm10_aqi * 1.5 : 0; // approximate
+
+  return {
+    european_aqi: aqi,
+    european_aqi_pm2_5: pm25_aqi,
+    european_aqi_pm10: pm10_aqi,
+    pm2_5: Math.round(pm2_5 * 10) / 10,
+    pm10: Math.round(pm10),
+    carbon_monoxide: co_val,
+    nitrogen_dioxide: no2_val,
+    sulphur_dioxide: so2_val,
+    ozone: o3_val,
+    station: waqiData.city?.name || 'Unknown',
+    dominentpol: waqiData.dominentpol || 'pm25'
+  };
 }
 
 // ── GET /live — Single point AQI ──
@@ -112,18 +102,21 @@ router.get('/live', async (req, res) => {
   if (cached) return res.json(cached);
 
   try {
+    const waqiData = await fetchWAQI(lat, lng);
+    const result = transformWAQI(waqiData);
+
+    if (result) {
+      setCache(key, result);
+      return res.json(result);
+    }
+
+    // Fallback to Open-Meteo if WAQI fails
     const url = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lng}&current=european_aqi,european_aqi_pm2_5,european_aqi_pm10,pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone`;
     const response = await fetch(url);
     const data = await response.json();
-
     if (data.current) {
-      // Apply micro-variation for location-specific differentiation
-      const result = { ...data.current };
-      result.european_aqi = applyLocalVariation(result.european_aqi, lat, lng);
-      result.european_aqi_pm2_5 = applyLocalVariation(result.european_aqi_pm2_5, lat, lng);
-      
-      setCache(key, result);
-      return res.json(result);
+      setCache(key, data.current);
+      return res.json(data.current);
     }
     res.status(500).json({ error: 'AQI data unavailable' });
   } catch (err) {
@@ -139,21 +132,37 @@ router.get('/zones', async (req, res) => {
   if (cached) return res.json(cached);
 
   try {
-    // Fetch all zones in parallel
     const promises = DELHI_ZONES.map(async (zone) => {
       try {
+        const waqiData = await fetchWAQI(zone.lat, zone.lon);
+        const transformed = transformWAQI(waqiData);
+
+        if (transformed) {
+          return {
+            name: zone.name,
+            area: zone.area,
+            lat: zone.lat,
+            lon: zone.lon,
+            aqi: transformed.european_aqi,
+            aqi_pm25: transformed.european_aqi_pm2_5,
+            aqi_pm10: transformed.european_aqi_pm10,
+            pm2_5: transformed.pm2_5,
+            pm10: transformed.pm10,
+            no2: transformed.nitrogen_dioxide,
+            so2: transformed.sulphur_dioxide,
+            co: transformed.carbon_monoxide,
+            o3: transformed.ozone,
+            station: transformed.station
+          };
+        }
+
+        // Fallback to Open-Meteo
         const url = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${zone.lat}&longitude=${zone.lon}&current=european_aqi,european_aqi_pm2_5,european_aqi_pm10,pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone`;
         const resp = await fetch(url);
         const data = await resp.json();
-
-        const baseAqi = data.current?.european_aqi ?? null;
-        
         return {
-          name: zone.name,
-          area: zone.area,
-          lat: zone.lat,
-          lon: zone.lon,
-          aqi: baseAqi !== null ? applyLocalVariation(baseAqi, zone.lat, zone.lon) : null,
+          name: zone.name, area: zone.area, lat: zone.lat, lon: zone.lon,
+          aqi: data.current?.european_aqi ?? null,
           aqi_pm25: data.current?.european_aqi_pm2_5 ?? null,
           aqi_pm10: data.current?.european_aqi_pm10 ?? null,
           pm2_5: data.current?.pm2_5 ?? null,
@@ -178,7 +187,7 @@ router.get('/zones', async (req, res) => {
   }
 });
 
-// ── GET /history — 7-day hourly history ──
+// ── GET /history — 7-day hourly history (Open-Meteo) ──
 router.get('/history', async (req, res) => {
   const { lat = 28.6139, lng = 77.2090, days = 7 } = req.query;
   const key = `history_${getCacheKey(lat, lng)}_${days}`;
@@ -201,7 +210,7 @@ router.get('/history', async (req, res) => {
   }
 });
 
-// ── GET /weather — Wind + Temperature ──
+// ── GET /weather — Wind + Temperature (Open-Meteo) ──
 router.get('/weather', async (req, res) => {
   const { lat = 28.6139, lng = 77.2090 } = req.query;
   const key = `weather_${getCacheKey(lat, lng)}`;

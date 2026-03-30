@@ -1,4 +1,5 @@
 import { fetchApi, setAuth } from '../utils.js';
+import { supabase } from '../supabaseClient.js';
 
 export const AuthPage = {
   render: () => `
@@ -9,16 +10,12 @@ export const AuthPage = {
           <p class="auth-subtitle">Sign in to submit pollution reports and access community features.</p>
 
           <div class="form-group">
-            <label class="form-label">Username</label>
-            <input type="text" id="log-user" class="form-input" placeholder="Enter your username" autocomplete="off">
+            <label class="form-label">Email</label>
+            <input type="email" id="log-email" class="form-input" placeholder="Enter your email" autocomplete="email">
           </div>
           <div class="form-group">
             <label class="form-label">Password</label>
             <input type="password" id="log-pass" class="form-input" placeholder="Enter your password">
-          </div>
-
-          <div style="background:var(--accent-soft); padding:12px 16px; border-radius:var(--radius-sm); margin-bottom:20px; font-size:0.82rem; color:var(--accent-text);">
-            <strong>Demo account:</strong> demo_citizen / citizen123
           </div>
 
           <button id="btn-login" class="btn btn-primary btn-lg" style="width:100%; margin-bottom:12px;">Sign In</button>
@@ -33,8 +30,12 @@ export const AuthPage = {
           <p class="auth-subtitle">Join the community to report pollution incidents in your area.</p>
 
           <div class="form-group">
+            <label class="form-label">Email</label>
+            <input type="email" id="reg-email" class="form-input" placeholder="Your email address" autocomplete="email">
+          </div>
+          <div class="form-group">
             <label class="form-label">Username</label>
-            <input type="text" id="reg-user" class="form-input" placeholder="Choose a username" autocomplete="off">
+            <input type="text" id="reg-user" class="form-input" placeholder="Choose a username (min. 3 chars)" autocomplete="off">
           </div>
           <div class="form-group">
             <label class="form-label">Display Name</label>
@@ -51,6 +52,17 @@ export const AuthPage = {
             Already have an account? <button id="btn-show-login">Sign in</button>
           </div>
         </div>
+
+        <div id="verify-section" style="display:none;">
+          <div style="text-align:center; padding:20px 0;">
+            <div style="font-size:3rem; margin-bottom:16px;">📧</div>
+            <h2 class="auth-title">Verify Your Email</h2>
+            <p class="auth-subtitle" id="verify-message">We've sent a verification link to your email. Please check your inbox and click the link to activate your account.</p>
+            <button id="btn-back-login" class="btn btn-secondary" style="margin-top:20px;">Back to Sign In</button>
+          </div>
+        </div>
+          </div>
+        </div>
       </div>
     </div>
   `,
@@ -63,16 +75,21 @@ export const AuthPage = {
     };
     document.getElementById('btn-show-login').onclick = () => {
       document.getElementById('register-section').style.display = 'none';
+      document.getElementById('verify-section').style.display = 'none';
+      document.getElementById('login-section').style.display = 'block';
+    };
+    document.getElementById('btn-back-login').onclick = () => {
+      document.getElementById('verify-section').style.display = 'none';
       document.getElementById('login-section').style.display = 'block';
     };
 
     // Login
     document.getElementById('btn-login').onclick = async () => {
       const btn = document.getElementById('btn-login');
-      const username = document.getElementById('log-user').value.trim();
+      const email = document.getElementById('log-email').value.trim();
       const password = document.getElementById('log-pass').value.trim();
 
-      if (!username || !password) return window.showToast('Please fill in all fields', 'error');
+      if (!email || !password) return window.showToast('Please fill in all fields', 'error');
 
       btn.textContent = 'Signing in...';
       btn.disabled = true;
@@ -80,9 +97,9 @@ export const AuthPage = {
       try {
         const data = await fetchApi('/auth/login', {
           method: 'POST',
-          body: JSON.stringify({ username, password })
+          body: JSON.stringify({ email, password })
         });
-        setAuth(data.token, data.user);
+        setAuth(data.token, data.user, data.refresh_token);
         window.showToast('Welcome back!', 'success');
         window.location.hash = '#/dashboard';
       } catch (e) {
@@ -92,8 +109,8 @@ export const AuthPage = {
       }
     };
 
-    // Allow Enter key
-    ['log-user', 'log-pass'].forEach(id => {
+    // Allow Enter key on login
+    ['log-email', 'log-pass'].forEach(id => {
       document.getElementById(id).addEventListener('keypress', (e) => {
         if (e.key === 'Enter') document.getElementById('btn-login').click();
       });
@@ -102,28 +119,49 @@ export const AuthPage = {
     // Register
     document.getElementById('btn-register').onclick = async () => {
       const btn = document.getElementById('btn-register');
+      const email = document.getElementById('reg-email').value.trim();
       const username = document.getElementById('reg-user').value.trim();
       const display_name = document.getElementById('reg-name').value.trim();
       const password = document.getElementById('reg-pass').value.trim();
 
-      if (!username || !display_name || !password) return window.showToast('Please fill in all fields', 'error');
+      if (!email || !username || !display_name || !password) {
+        return window.showToast('Please fill in all fields', 'error');
+      }
 
       btn.textContent = 'Creating...';
       btn.disabled = true;
 
       try {
-        await fetchApi('/auth/register', {
+        const data = await fetchApi('/auth/register', {
           method: 'POST',
-          body: JSON.stringify({ username, password, display_name })
+          body: JSON.stringify({ email, username, password, display_name })
         });
-        window.showToast('Account created! Please sign in.', 'success');
-        document.getElementById('btn-show-login').click();
+
+        if (data.needsVerification) {
+          // Show verification screen
+          document.getElementById('register-section').style.display = 'none';
+          document.getElementById('verify-section').style.display = 'block';
+          document.getElementById('verify-message').textContent =
+            `We've sent a verification link to ${email}. Please check your inbox and click the link to activate your account.`;
+          window.showToast('Check your email to verify!', 'success');
+        } else {
+          window.showToast('Account created! Sign in now.', 'success');
+          document.getElementById('btn-show-login').click();
+        }
       } catch (e) {
         window.showToast(e.message, 'error');
+      } finally {
         btn.textContent = 'Create Account';
         btn.disabled = false;
       }
     };
+
+    // Allow Enter key on register
+    ['reg-email', 'reg-user', 'reg-name', 'reg-pass'].forEach(id => {
+      document.getElementById(id).addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') document.getElementById('btn-register').click();
+      });
+    });
   }
 };
 
@@ -135,16 +173,12 @@ export const GovAuthPage = {
         <p class="auth-subtitle">Restricted to authorized DPCC personnel only. No public registration available.</p>
 
         <div class="form-group">
-          <label class="form-label">User ID</label>
-          <input type="text" id="gov-user" class="form-input" placeholder="Government User ID" autocomplete="off">
+          <label class="form-label">Email</label>
+          <input type="email" id="gov-email" class="form-input" placeholder="Government email" autocomplete="email">
         </div>
         <div class="form-group">
           <label class="form-label">Password</label>
           <input type="password" id="gov-pass" class="form-input" placeholder="Password">
-        </div>
-
-        <div style="background:rgba(197,71,91,0.08); padding:12px 16px; border-radius:var(--radius-sm); margin-bottom:20px; font-size:0.82rem; color:var(--danger);">
-          <strong>Demo credentials:</strong> dpcc_admin / DelhiCleanAir@2024
         </div>
 
         <button id="btn-gov-login" class="btn btn-primary btn-lg" style="width:100%;">Sign In</button>
@@ -155,10 +189,10 @@ export const GovAuthPage = {
   init: () => {
     document.getElementById('btn-gov-login').onclick = async () => {
       const btn = document.getElementById('btn-gov-login');
-      const username = document.getElementById('gov-user').value.trim();
+      const email = document.getElementById('gov-email').value.trim();
       const password = document.getElementById('gov-pass').value.trim();
 
-      if (!username || !password) return window.showToast('Please fill in all fields', 'error');
+      if (!email || !password) return window.showToast('Please fill in all fields', 'error');
 
       btn.textContent = 'Verifying...';
       btn.disabled = true;
@@ -166,9 +200,9 @@ export const GovAuthPage = {
       try {
         const data = await fetchApi('/auth/gov-login', {
           method: 'POST',
-          body: JSON.stringify({ username, password })
+          body: JSON.stringify({ email, password })
         });
-        setAuth(data.token, data.user);
+        setAuth(data.token, data.user, data.refresh_token);
         window.showToast('Government access granted.', 'success');
         window.location.hash = '#/gov/dashboard';
       } catch (e) {
@@ -179,7 +213,7 @@ export const GovAuthPage = {
     };
 
     // Enter key support
-    ['gov-user', 'gov-pass'].forEach(id => {
+    ['gov-email', 'gov-pass'].forEach(id => {
       document.getElementById(id).addEventListener('keypress', (e) => {
         if (e.key === 'Enter') document.getElementById('btn-gov-login').click();
       });

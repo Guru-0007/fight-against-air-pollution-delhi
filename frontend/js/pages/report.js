@@ -1,5 +1,5 @@
 import { Reports } from '../api/api.js';
-import { getUser } from '../utils.js';
+import { getUser, getToken } from '../utils.js';
 
 export const ReportPage = {
   render: () => {

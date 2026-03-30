@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Real-time air quality monitoring platform for Delhi — track AQI across 15 zones, submit pollution reports, and analyze environmental data.">
-  <title>Delhi Air Quality Intelligence</title>
+  <title>PolluSense Air Intelligence</title>
 
   <!-- Fonts: Inter for clean modern typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,11 +18,35 @@
   <link rel="stylesheet" href="css/theme.css">
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/pages.css">
+
+  <!-- Supabase JS (for frontend session management) -->
+  <script type="importmap">
+  {
+    "imports": {
+      "@supabase/supabase-js": "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm"
+    }
+  }
+  </script>
 </head>
 <body>
   <!-- Ambient Background -->
   <canvas id="ambient-canvas"></canvas>
   <div class="ambient-gradient" id="ambient-gradient"></div>
+
+  <!-- Intro Animation Overlay -->
+  <div id="intro-overlay" class="intro-overlay">
+    <div class="intro-fog intro-fog-1"></div>
+    <div class="intro-fog intro-fog-2"></div>
+    <div class="intro-map-reveal"></div>
+    <div class="intro-content">
+      <div class="intro-logo">
+        <span class="intro-icon">◉</span>
+        <span class="intro-text">PolluSense</span>
+      </div>
+      <div class="intro-subtext">Delhi Air Intelligence</div>
+    </div>
+    <button id="intro-skip" class="intro-skip">Skip Intro</button>
+  </div>
 
   <!-- App Shell -->
   <div id="app" class="app-shell">
@@ -31,7 +55,7 @@
       <div class="header-left">
         <h1 class="logo" id="logo">
           <span class="logo-icon">◉</span>
-          Delhi Air Quality
+          PolluSense
         </h1>
         <span class="live-badge" id="live-badge">
           <span class="live-dot"></span>
@@ -55,6 +79,24 @@
     <!-- Toast Notifications -->
     <div id="toast-container" class="toast-container"></div>
     <div id="modal-container"></div>
+
+    <!-- Global Image Modal -->
+    <div id="report-modal" class="report-modal" style="display: none;">
+      <div class="report-modal-backdrop" onclick="window.closeReportModal()"></div>
+      <div class="report-modal-content">
+        <button class="modal-close" onclick="window.closeReportModal()">&times;</button>
+        <div class="modal-header">
+          <h3 id="modal-title">Report Title</h3>
+          <span id="modal-status" class="badge">Status</span>
+        </div>
+        <div class="modal-meta" id="modal-meta">Reporter Name · Date</div>
+        <div class="modal-image-container">
+          <img id="modal-image" src="" alt="Report Evidence" onerror="this.style.display='none'">
+        </div>
+        <div id="modal-desc" class="modal-desc">Description text</div>
+        <div id="modal-loc" class="modal-loc">📍 Location</div>
+      </div>
+    </div>
   </div>
 
   <!-- Leaflet JS -->
@@ -65,6 +107,6 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <!-- Application -->
-  <script type="module" src="js/app.js?v=6.0"></script>
+  <script type="module" src="js/app.js?v=7.0"></script>
 </body>
 </html>

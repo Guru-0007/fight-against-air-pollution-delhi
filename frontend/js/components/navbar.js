@@ -3,11 +3,11 @@ import { getUser, logout } from '../utils.js';
 // ── Theme Management ──
 function initTheme() {
   try {
-    const saved = localStorage.getItem('dq_theme');
-    if (saved) {
-      document.documentElement.setAttribute('data-theme', saved);
-    }
-  } catch {}
+    const saved = localStorage.getItem('dq_theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', saved);
+  } catch {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  }
 }
 
 function toggleTheme() {

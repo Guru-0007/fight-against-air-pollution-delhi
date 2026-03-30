@@ -1,54 +1,72 @@
-# Delhi Air Quality Command Center
+# 🌫️ PolluSense: Delhi Air Intelligence Platform
 
-A fully dynamic, real-time web platform built to monitor, analyze, and manage air pollution across the Delhi-NCR region. Features dual-mode access for Citizens and Government Officials, integrating live AQI metrics, interactive mapping, health impact algorithms, and community reporting.
+**PolluSense** is a state-of-the-art, full-stack air quality command center designed to monitor, analyze, and mitigate pollution in the Delhi-NCR region. It bridges the gap between citizen awareness and government action through real-time data visualization and interactive health algorithms.
 
-## Features
+---
 
-- **Real-Time Data**: Integrates with Open-Meteo Air Quality API to provide live index numbers, PM2.5, PM10, Nitrogen Dioxide, and weather statuses for any specific pincode.
-- **Dynamic Geography**: Built-in Nominatim geocoding engine converts any Delhi-NCR pincode or area name into precise GPS coordinates to fetch exact, hyper-local pollution data dynamically. 
-- **True Cost Health Calculator**: Clinically derived algorithms convert local PM2.5 concentrations into "Cigarette Equivalents", calculates predicted Lifespan Reductions alongside asthma risk percentages, and projects estimated healthcare costs (with charted 5-year trajectories).
-- **Interactive Mapping**: Leaflet-based heatmaps and geocoded location markers mapping all government monitoring stations and sensitive vulnerable zones.
-- **Dual User Modes**:
-  - *Citizen View*: Browse maps, calculate personal health impact, discover DIY home-air tips, and report local emission violations anonymously.
-  - *Government Dashboard*: Secured control panel for authorities to track real-time complaint tickets, monitor dynamic suspicion indices of industrial zones, dispatch enforcement emails to polluting factories, and update citizen reports globally.
-- **Responsive & Modern UI**: A premium, "glassmorphism" aesthetic built purely with optimized CSS and native JavaScript modules.
+## 🚀 Key Features
 
-## Getting Started
+### 🏛️ Dual-Mode Ecosystem
+- **Citizen Portal**: Provides hyper-local AQI data, personalized health risk assessments, and a community reporting tool for pollution violations.
+- **Government Control Panel**: A restricted dashboard for environmental authorities to manage citizen reports, analyze industrial suspicion indices, and dispatch warnings to non-compliant sectors.
 
-### Prerequisites
-- Node.js (v18+)
-- npm
+### 🧪 True Cost Health Calculator
+- **PM2.5 to Cigarette Conversion**: Visualizes the toxicity of the current air in terms of cigarettes smoked per day.
+- **Life Expectancy Analysis**: Dynamically calculates predicted lifespan reduction based on long-term AQI exposure.
+- **Economic Impact**: Projects estimated medical costs and healthcare trajectories over a 5-year period.
 
-### Installation
+### 🗺️ Dynamic Intelligence
+- **Geocoding Search**: Convert any Delhi pincode or area name into precise GPS coordinates to fetch local pollution metrics.
+- **Interactive Heatmaps**: Heatmap visualizations of pollution hotspots using the Leaflet.js engine.
+- **Live AQI Integration**: Real-time multi-pollutant data (PM2.5, PM10, NO2) sourced from high-precision meteorological APIs.
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/Guru-0007/fight-against-air-pollution-delhi.git
-   cd fight-against-air-pollution-delhi
-   ```
+### 🛡️ Community Safeguards
+- **Evidence-Based Reporting**: Citizens can upload images and geotagged descriptions of pollution incidents.
+- **Verified Leaderboard**: Rewards the most active and verified contributors in the pollution monitoring community.
 
-2. **Install backend dependencies:**
-   ```bash
-   cd backend
-   npm install
-   ```
+---
 
-3. **Start the server:**
-   ```bash
-   npm start
-   ```
+## 💻 Tech Stack
 
-4. **View the application:**
-   Open your browser and navigate to `http://localhost:3005` (or simply open `frontend/index.html` manually).
+- **Frontend**: Native ES6+ JavaScript, CSS3 Glassmorphism UI, Leaflet.js (Maps), Chart.js (Data Viz)
+- **Backend**: Node.js, Express.js, Supabase (Database & Auth)
+- **APIs**: Open-Meteo Air Quality, OSM Nominatim Geocoding
 
-*Note: For government access, use the "Government Login" section with the credentials configured in your environment.*
+---
 
-## Technologies Used
-- Frontend: HTML5, CSS3 (Custom Glass UI), Vanilla ES6 JavaScript
-- Maps: Leaflet.js
-- Charts: Chart.js
-- Backend: Node.js, Express.js
-- APIs: Open-Meteo, OpenStreetMap Nominatim
+## 🛠️ Getting Started
 
-## License
-MIT License
+### 1. Prerequisites
+- [Node.js](https://nodejs.org/) (v18.x or higher)
+- [Supabase Account](https://supabase.com/)
+
+### 2. Local Setup
+```bash
+# Clone the repository
+git clone https://github.com/Guru-0007/fight-against-air-pollution-delhi.git
+cd fight-against-air-pollution-delhi
+
+# Setup Backend
+cd backend
+npm install
+
+# Setup Frontend
+# (No install needed - served statically by backend)
+```
+
+### 3. Launch
+```bash
+# Start the full ecosystem
+npm start
+```
+The application will be live at `http://localhost:3005`.
+
+---
+
+## 🏢 Government Access
+To log into the Government Dashboard, use the credentials provided in your internal documentation. 
+
+---
+
+## 📜 License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
