@@ -1,4 +1,4 @@
-import { AQI, Reports } from '../api/api.js';
+import { AQI } from '../api/api.js';
 import { AQIMap } from '../components/map.js';
 import { ambientSystem } from '../ambient.js';
 import { getAQIColor, getAQIColorRaw, getAQILabel, getAQIBadgeClass } from '../utils.js';
@@ -177,7 +177,7 @@ export const Dashboard = {
         AQI.getZones().catch(() => []),
         AQI.getWeather(28.6139, 77.2090).catch(() => ({})),
         AQI.getHistory(28.6139, 77.2090, 7).catch(() => ({ european_aqi: [] })),
-        Reports.getAll().catch(() => ([]))
+        fetch('/api/reports?status=').then(r=>r.json()).catch(() => ([]))
       ]);
 
       currentZones = zones;
@@ -263,7 +263,11 @@ async function selectLocation(lat, lng, name) {
       AQI.getLiveAQI(lat, lng).catch(() => ({})),
       AQI.getWeather(lat, lng).catch(() => ({})),
       AQI.getHistory(lat, lng, 7).catch(() => ({ european_aqi: [] })),
-      Calculator.calculate({ lat, lng }).catch(() => null)
+      fetch('/api/calculator', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lat, lng })
+      }).then(r => r.json()).catch(() => null)
     ]);
 
     // Use passedAqi / passedPm25 if available from map zone click, otherwise parse from liveData

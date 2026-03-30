@@ -1,10 +1,17 @@
 {
-  "name": "pollusense-frontend",
-  "version": "3.1.0",
-  "description": "Pure Frontend Air Quality Intelligence Platform",
+  "name": "pollusense-monorepo",
+  "version": "1.0.0",
+  "type": "module",
   "scripts": {
-    "build": "echo 'Frontend Static Build Complete'",
-    "start": "echo 'Serve frontend/index.html locally'"
+    "build": "cd backend && npm install",
+    "start": "cd backend && node server.js"
   },
-  "dependencies": {}
+  "dependencies": {
+    "express": "^4.21.0",
+    "cors": "^2.8.5",
+    "multer": "^1.4.5-lts.1",
+    "node-fetch": "^3.3.2",
+    "@supabase/supabase-js": "^2.49.0",
+    "bcryptjs": "^2.4.3"
+  }
 }

@@ -1,8 +1,18 @@
 {
   "version": 2,
-  "public": false,
-  "cleanUrls": true,
   "rewrites": [
-    { "source": "/(.*)", "destination": "/frontend/$1" }
-  ]
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/frontend/$1"
+    }
+  ],
+  "functions": {
+    "api/index.js": {
+      "includeFiles": "frontend/**"
+    }
+  }
 }
