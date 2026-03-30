@@ -1,4 +1,4 @@
-import { AQI } from '../api/api.js';
+import { AQI, Reports } from '../api/api.js';
 import { AQIMap } from '../components/map.js';
 import { ambientSystem } from '../ambient.js';
 import { getAQIColor, getAQIColorRaw, getAQILabel, getAQIBadgeClass } from '../utils.js';
