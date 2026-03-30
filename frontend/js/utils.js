@@ -105,13 +105,8 @@ export const fetchApi = async (url, options = {}) => {
     headers['Content-Type'] = 'application/json';
   }
 
-  // Determine base URL dynamically
-  let baseUrl = '/api';
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    baseUrl = 'http://localhost:3005/api';
-  }
-
-  const res = await fetch(`${baseUrl}${url}`, { ...options, headers });
+  // Pure frontend: fetch handles absolute URLs or relative to static root
+  const res = await fetch(url, { ...options, headers });
 
   if (!res.ok) {
     let err = 'Request failed';

@@ -177,7 +177,7 @@ export const Dashboard = {
         AQI.getZones().catch(() => []),
         AQI.getWeather(28.6139, 77.2090).catch(() => ({})),
         AQI.getHistory(28.6139, 77.2090, 7).catch(() => ({ european_aqi: [] })),
-        fetch('/api/reports?status=').then(r=>r.json()).catch(() => ([]))
+        Reports.getAll().catch(() => ([]))
       ]);
 
       currentZones = zones;

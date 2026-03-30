@@ -95,12 +95,22 @@ export const AuthPage = {
       btn.disabled = true;
 
       try {
-        const data = await fetchApi('/auth/login', {
-          method: 'POST',
-          body: JSON.stringify({ email, password })
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+
+        // Fetch profile to get role/username
+        const { data: profile } = await supabase.from('profiles').select('*').eq('id', data.user.id).single();
+        
+        setAuth({
+          token: data.session.access_token,
+          user: { 
+            id: data.user.id, 
+            email: data.user.email,
+            username: profile?.username || 'user',
+            role: profile?.role || 'user'
+          }
         });
-        setAuth(data.token, data.user, data.refresh_token);
-        window.showToast('Welcome back!', 'success');
+        window.showToast('Successfully signed in', 'success');
         window.location.hash = '#/dashboard';
       } catch (e) {
         window.showToast(e.message, 'error');
@@ -121,10 +131,10 @@ export const AuthPage = {
       const btn = document.getElementById('btn-register');
       const email = document.getElementById('reg-email').value.trim();
       const username = document.getElementById('reg-user').value.trim();
-      const display_name = document.getElementById('reg-name').value.trim();
+      const name = document.getElementById('reg-name').value.trim();
       const password = document.getElementById('reg-pass').value.trim();
 
-      if (!email || !username || !display_name || !password) {
+      if (!email || !username || !name || !password) {
         return window.showToast('Please fill in all fields', 'error');
       }
 
@@ -132,22 +142,19 @@ export const AuthPage = {
       btn.disabled = true;
 
       try {
-        const data = await fetchApi('/auth/register', {
-          method: 'POST',
-          body: JSON.stringify({ email, username, password, display_name })
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { username, full_name: name, role: 'user' }
+          }
         });
+        if (error) throw error;
 
-        if (data.needsVerification) {
-          // Show verification screen
-          document.getElementById('register-section').style.display = 'none';
-          document.getElementById('verify-section').style.display = 'block';
-          document.getElementById('verify-message').textContent =
-            `We've sent a verification link to ${email}. Please check your inbox and click the link to activate your account.`;
-          window.showToast('Check your email to verify!', 'success');
-        } else {
-          window.showToast('Account created! Sign in now.', 'success');
-          document.getElementById('btn-show-login').click();
-        }
+        document.getElementById('register-section').style.display = 'none';
+        document.getElementById('verify-section').style.display = 'block';
+        document.getElementById('verify-message').textContent = `We've sent a verification link to ${email}. Please check your inbox and click the link to activate your account.`;
+        window.showToast('Check your email to verify!', 'success');
       } catch (e) {
         window.showToast(e.message, 'error');
       } finally {

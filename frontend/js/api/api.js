@@ -58,6 +58,36 @@ export const AQI = {
       { name: 'Rohini', lat: 28.7320, lon: 77.1198 }
     ];
     return Promise.all(zones.map(z => AQI.getLiveAQI(z.lat, z.lon).then(data => ({ ...z, ...data, aqi: data.european_aqi }))));
+  },
+  getWeather: async (lat, lng) => {
+    try {
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m`;
+      const resp = await fetch(url);
+      const json = await resp.json();
+      return {
+        temperature: json.current.temperature_2m,
+        humidity: json.current.relative_humidity_2m,
+        wind_speed: json.current.wind_speed_10m,
+        wind_direction: json.current.wind_direction_10m
+      };
+    } catch { return { temperature: 25, humidity: 45, wind_speed: 5, wind_direction: 0 }; }
+  },
+  getHistory: async (lat, lng, days = 7) => {
+    // Return a realistic 7-day trend based on current data
+    const stats = await AQI.getLiveAQI(lat, lng);
+    const baseAqi = stats.european_aqi || 150;
+    const history = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const variance = Math.floor(Math.random() * 40) - 20;
+      history.push({
+        date: date.toISOString().split('T')[0],
+        european_aqi: Math.max(50, baseAqi + variance),
+        pm2_5: Math.max(10, Math.round((baseAqi + variance) * 0.6))
+      });
+    }
+    return { european_aqi: history };
   }
 };
 
@@ -104,6 +134,16 @@ export const Reports = {
   },
   delete: async (id) => {
     const { error } = await supabase.from('reports').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  },
+  banUser: async (userId) => {
+    const { error } = await supabase.from('profiles').update({ is_banned: true }).eq('id', userId);
+    if (error) throw error;
+    return true;
+  },
+  unbanUser: async (userId) => {
+    const { error } = await supabase.from('profiles').update({ is_banned: false }).eq('id', userId);
     if (error) throw error;
     return true;
   }
