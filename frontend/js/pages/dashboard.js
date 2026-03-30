@@ -263,11 +263,7 @@ async function selectLocation(lat, lng, name) {
       AQI.getLiveAQI(lat, lng).catch(() => ({})),
       AQI.getWeather(lat, lng).catch(() => ({})),
       AQI.getHistory(lat, lng, 7).catch(() => ({ european_aqi: [] })),
-      fetch('/api/calculator', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lat, lng })
-      }).then(r => r.json()).catch(() => null)
+      Calculator.calculate({ lat, lng }).catch(() => null)
     ]);
 
     // Use passedAqi / passedPm25 if available from map zone click, otherwise parse from liveData

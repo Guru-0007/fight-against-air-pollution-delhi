@@ -1,4 +1,4 @@
-import { Calculator } from '../api/api.js';
+import { Calculator, AQI } from '../api/api.js';
 
 export const CalculatorPage = {
   render: () => `
@@ -152,8 +152,8 @@ export const CalculatorPage = {
               // Find baseline AQI
               let aqi = 150; let pm25 = 65;
               try {
-                  const live = await window.fetch(`/api/aqi/live?lat=${targetLat}&lng=${targetLng}`).then(r => r.json());
-                  aqi = live.european_aqi || live.european_aqi_pm2_5 || 150;
+                  const live = await AQI.getLiveAQI(targetLat, targetLng);
+                  aqi = live.european_aqi || 150;
                   pm25 = live.pm2_5 || (aqi * 0.6);
               } catch (apiErr) {
                  // extreme worst case just predict via hardcoded averages so it prints to UI

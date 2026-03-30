@@ -51,11 +51,24 @@ export const AQI = {
     };
   },
   getZones: async () => {
-    // Top Delhi Zones for static reference
+    // Comprehensive Delhi Zones for a populated sidebar
     const zones = [
-      { name: 'Anand Vihar', lat: 28.6469, lon: 77.3159 },
-      { name: 'ITO', lat: 28.6284, lon: 77.2405 },
-      { name: 'Rohini', lat: 28.7320, lon: 77.1198 }
+      { name: 'Anand Vihar', area: 'East Delhi', lat: 28.6469, lon: 77.3159 },
+      { name: 'ITO', area: 'Central Delhi', lat: 28.6284, lon: 77.2405 },
+      { name: 'Rohini', area: 'North Delhi', lat: 28.7320, lon: 77.1198 },
+      { name: 'Dwarka', area: 'South West Delhi', lat: 28.5921, lon: 77.0460 },
+      { name: 'Okhla', area: 'South Delhi', lat: 28.5398, lon: 77.2711 },
+      { name: 'Mundka', area: 'West Delhi', lat: 28.6811, lon: 77.0378 },
+      { name: 'Alipur', area: 'North Delhi', lat: 28.8021, lon: 77.1328 },
+      { name: 'Bawana', area: 'North West Delhi', lat: 28.7997, lon: 77.0336 },
+      { name: 'Narela', area: 'North West Delhi', lat: 28.8436, lon: 77.0913 },
+      { name: 'Shadipur', area: 'West Delhi', lat: 28.6517, lon: 77.1581 },
+      { name: 'Wazirpur', area: 'North West Delhi', lat: 28.6997, lon: 77.1654 },
+      { name: 'Ashok Vihar', area: 'North West Delhi', lat: 28.6953, lon: 77.1816 },
+      { name: 'Jahangirpuri', area: 'North Delhi', lat: 28.7328, lon: 77.1706 },
+      { name: 'Sonia Vihar', area: 'North East Delhi', lat: 28.7108, lon: 77.2470 },
+      { name: 'Lodhi Road', area: 'Central Delhi', lat: 28.5918, lon: 77.2273 },
+      { name: 'Pusa', area: 'Central Delhi', lat: 28.6339, lon: 77.1467 }
     ];
     return Promise.all(zones.map(z => AQI.getLiveAQI(z.lat, z.lon).then(data => ({ ...z, ...data, aqi: data.european_aqi }))));
   },
@@ -73,19 +86,15 @@ export const AQI = {
     } catch { return { temperature: 25, humidity: 45, wind_speed: 5, wind_direction: 0 }; }
   },
   getHistory: async (lat, lng, days = 7) => {
-    // Return a realistic 7-day trend based on current data
+    // Return a realistic 168-hour trend based on current data (168 points = 7 days x 24 hours)
     const stats = await AQI.getLiveAQI(lat, lng);
     const baseAqi = stats.european_aqi || 150;
     const history = [];
-    for (let i = days - 1; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
+    const now = new Date();
+    for (let i = (days * 24) - 1; i >= 0; i--) {
+      const hourDate = new Date(now.getTime() - i * 60 * 60 * 1000);
       const variance = Math.floor(Math.random() * 40) - 20;
-      history.push({
-        date: date.toISOString().split('T')[0],
-        european_aqi: Math.max(50, baseAqi + variance),
-        pm2_5: Math.max(10, Math.round((baseAqi + variance) * 0.6))
-      });
+      history.push(Math.max(50, baseAqi + variance));
     }
     return { european_aqi: history };
   }
@@ -170,9 +179,10 @@ export const Calculator = {
     const stats = await AQI.getLiveAQI(targetLat, targetLng);
     const pm25 = stats.pm2_5 || 65;
 
-    // Health Math
+    // Health Math (Matching original backend calculator.js)
     const cigaretteEq = (pm25 / 22).toFixed(1);
     const lifespanYears = Math.max(((pm25 - 10) * 0.05), 0).toFixed(1);
+    const asthmaRiskIncrease = Math.min((pm25 / 10) * 5, 100).toFixed(1);
     const annualCost = Math.round(stats.european_aqi * 1450 * (stats.european_aqi > 200 ? 1.5 : 1.2));
 
     const currentYear = new Date().getFullYear();
@@ -186,7 +196,9 @@ export const Calculator = {
       aqi: stats.european_aqi,
       cigaretteEq,
       lifespanReductionYears: lifespanYears,
+      asthmaRiskIncrease,
       estimatedCost: annualCost.toLocaleString('en-IN'),
+      estimatedCostRaw: annualCost,
       projection
     };
   }

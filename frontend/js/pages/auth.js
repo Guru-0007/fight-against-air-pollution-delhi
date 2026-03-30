@@ -107,6 +107,7 @@ export const AuthPage = {
             id: data.user.id, 
             email: data.user.email,
             username: profile?.username || 'user',
+            type: profile?.role || 'user', // Match legacy type expectations
             role: profile?.role || 'user'
           }
         });
